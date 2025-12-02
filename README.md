@@ -1,2 +1,2 @@
 # Aegis
-Blazingly fast message encryption tool.
+Blazingly fast encrypted tui messager. 
