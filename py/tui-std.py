@@ -15,74 +15,154 @@ RESET = f"{ESC}[0m"
 HIDE_CURSOR = f"{ESC}[?25l"
 # Show Cursor
 SHOW_CURSOR = f"{ESC}[?25h"
+# Inverse
+SELECTION_STYLE = f"{ESC}[7m"
 
-def move_cursor(y, x):
-    """Returns ANSI code to move cursor to row y, col x."""
-    return f"{ESC}[{y};{x}H"
-
-def draw_box(h, w, y, x):
-    """Draws a box using basic ASCII characters."""
-    # Draw top border
-    sys.stdout.write(move_cursor(y, x))
-    sys.stdout.write("+" + "-" * (w - 2) + "+")
-    
-    # Draw sides
-    for i in range(1, h - 1):
-        sys.stdout.write(move_cursor(y + i, x))
-        sys.stdout.write("|" + " " * (w - 2) + "|")
+class KeyboardListener:
+    """
+    A cross-platform keyboard listener using only Python standard libraries.
+    Works on Windows, Linux, and macOS.
+    """
+    def __init__(self):
+        self.os_type = sys.platform
         
-    # Draw bottom
-    sys.stdout.write(move_cursor(y + h - 1, x))
-    sys.stdout.write("+" + "-" * (w - 2) + "+")
+        # Windows uses msvcrt
+        if self.os_type == 'win32':
+            import msvcrt
+            self.msvcrt = msvcrt
+        
+        # Linux/macOS uses termios/tty
+        else:
+            import tty
+            import termios
+            self.tty = tty
+            self.termios = termios
+
+    def get_key(self):
+        """
+        Reads a single character from standard input without requiring the user 
+        to press Enter. This blocks execution until a key is pressed.
+        """
+        if self.os_type == 'win32':
+            # Windows implementation
+            # getch() returns bytes, so we decode it
+            # msvcrt.getch() reads a keypress and returns the resulting character.
+            key = self.msvcrt.getch()
+            try:
+                return key.decode('utf-8')
+            except UnicodeDecodeError:
+                # Handle special keys (arrows, function keys) which return multi-byte codes
+                return 'special_key'
+
+        else:
+            # Unix/Linux/macOS implementation
+            # We must switch the terminal to 'raw' mode to read 1 byte at a time
+            # instead of waiting for a newline (canonical mode).
+            fd = sys.stdin.fileno()
+            old_settings = self.termios.tcgetattr(fd)
+            try:
+                self.tty.setraw(sys.stdin.fileno())
+                ch = sys.stdin.read(1)
+            finally:
+                # Always restore terminal settings to normal, otherwise the
+                # terminal will remain in a weird state after exit.
+                self.termios.tcsetattr(fd, self.termios.TCSADRAIN, old_settings)
+            return ch
+
+
+class ScreenCursor:
+    def __init__(self):
+        self.pos_y = 1
+        self.pos_x = 1
+
+    def write(self, text):
+        """Writes text at current cursor position."""
+        sys.stdout.write(text)
+        sys.stdout.flush()
+        # Update cursor position
+        lines = text.split('\n')
+        if len(lines) == 1:
+            self.pos_x += len(lines[0])
+        else:
+            self.pos_y += len(lines) - 1
+            self.pos_x = len(lines[-1]) + 1
+
+    def move_to(self, y, x):
+        """Moves cursor to (y, x) position."""
+        sys.stdout.write(f"{ESC}[{y};{x}H")
+        self.pos_y = y
+        self.pos_x = x
+
+    def lines_down(self, n=1):
+        """Moves cursor down by n lines."""
+        self.pos_y += n
+        sys.stdout.write(f"{ESC}[{n}B")
+
+    def lines_up(self, n=1):
+        """Moves cursor up by n lines."""
+        self.pos_y -= n
+        sys.stdout.write(f"{ESC}[{n}A")
+                         
+    def quit(self):
+        """Restores cursor visibility and exits."""
+        sys.stdout.write(SHOW_CURSOR)
+        sys.stdout.write(RESET)
+        sys.stdout.write(CLEAR)
+        sys.stdout.write(HOME)
+        sys.stdout.flush()
+        print("Goodbye!")
+
+def draw_menu(cursor:ScreenCursor):
+    cursor.write(HIDE_CURSOR)
+    cursor.write(CLEAR)
+    cursor.move_to(1, 1)
+    cursor.write("Simple TUI Example\n")
+    cursor.write("-------------------\n")
+    global op1Pos, op2Pos
+    op1Pos = (cursor.pos_y, cursor.pos_x)
+    cursor.write("1. Option\n\n")
+    op2Pos = (cursor.pos_y, cursor.pos_x)
+    cursor.write("2. Option\n\n")
+    cursor.write("Press 'q' to quit.\n")
 
 def main():
+    listener = KeyboardListener()
+    cursor = ScreenCursor()
     try:
         # 1. Setup screen
         os.system('cls' if os.name == 'nt' else 'clear') # Basic flush
-        sys.stdout.write(HIDE_CURSOR)
+        draw_menu(cursor)
         
-        # 2. Draw static UI
-        draw_box(10, 40, 5, 5)
-        
-        sys.stdout.write(move_cursor(6, 7))
-        sys.stdout.write(f"{RED}Built-in TUI Demo{RESET}")
-        
-        sys.stdout.write(move_cursor(8, 7))
-        sys.stdout.write("Press Ctrl+C to exit...")
-        
-        # 3. Simple Animation Loop
-        cols = 7
-        direction = 1
         while True:
-            # Clear the specific line (simple way: overwrite with spaces)
-            sys.stdout.write(move_cursor(10, 7))
-            sys.stdout.write(" " * 30) 
-            
-            # Draw the bouncer
-            sys.stdout.write(move_cursor(10, cols))
-            sys.stdout.write("O")
-            
             # Flush buffer to ensure it displays immediately
-            sys.stdout.flush()
+            key = listener.get_key()
             
-            # Logic
-            cols += direction
-            if cols > 30 or cols < 7:
-                direction *= -1
-                
+            match key:
+                case 'q':
+                    break
+                case '1':
+                    draw_menu(cursor)  # Redraw menu to clear previous selection
+                    cursor.move_to(*op1Pos)
+                    cursor.write(SELECTION_STYLE + "1. Option" + RESET)
+                case '2':
+                    draw_menu(cursor)  # Redraw menu to clear previous selection
+                    cursor.move_to(*op2Pos)
+                    cursor.write(SELECTION_STYLE + "2. Option" + RESET)
+                case _:
+                    cursor.move_to(12, 5)
+                    cursor.write(" " * 30)  # Clear line
+                    cursor.move_to(12, 5)
+                    cursor.write("Invalid option. Press '1', '2', or 'q' to quit.")
+
+            sys.stdout.flush()
+                            
             time.sleep(0.1)
 
     except KeyboardInterrupt:
         # Handle exit gracefully
         pass
     finally:
-        # 4. Cleanup (Crucial!)
-        # If you don't do this, the user's terminal might stay hidden/messy
-        sys.stdout.write(SHOW_CURSOR)
-        sys.stdout.write(RESET)
-        sys.stdout.write(CLEAR)
-        sys.stdout.write(HOME)
-        print("Goodbye!")
+        cursor.quit()
 
 if __name__ == "__main__":
     main()
