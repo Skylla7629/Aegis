@@ -1,6 +1,8 @@
 ##
 import threading
 import sys
+import os
+import signal
 
 # --- ANSI Constants ---
 ESC = "\033"
@@ -111,12 +113,28 @@ class TUI(threading.Thread):
         super().__init__()
         self.kbListener = KeyboardListener()
         self.cursor = ScreenCursor()
+        if hasattr(signal, 'SIGWINCH'):
+            signal.signal(signal.SIGWINCH, self.on_resize)
+        signal.signal(signal.SIGINT, self.on_exit)
+
+    def get_size(self):
+        """Returns terminal size as (rows, cols)."""
+        return os.get_terminal_size().lines, os.get_terminal_size().columns
+
+    def on_resize(self, signum, frame):
+        # Handle terminal resize events if needed
+        pass
+
+    def on_exit(self, signum, frame):
+        self.cursor.quit()
+        sys.exit(0)
 
     def run(self) -> None:
         self.cursor.write(HIDE_CURSOR)
         self.cursor.write(CLEAR)
         self.cursor.move_to(1, 1)
         self.cursor.write("TUI Started. Press 'q' to quit.\n")
+        self.cursor.write(f"{RED}Terminal Size: {self.get_size()[0]} rows x {self.get_size()[1]} cols{RESET}\n")
         while True:
             key = self.kbListener.get_key()
             if key == 'q':
