@@ -18,81 +18,49 @@ class KeyboardListener:
     Works on Windows, Linux, and macOS.
     """
     def __init__(self):
-        self.os_type = sys.platform
-        
-        # Windows uses msvcrt
-        if self.os_type == 'win32':
-            import msvcrt
-            self.msvcrt = msvcrt
-        
         # Linux/macOS uses termios/tty
-        else:
-            import tty
-            import termios
-            import select
-            self.tty = tty
-            self.termios = termios
-            self.select = select
+        import tty
+        import termios
+        import select
+        self.tty = tty
+        self.termios = termios
+        self.select = select
 
     def get_key(self):
         """
         Reads a single character from standard input without requiring the user 
         to press Enter. This blocks execution until a key is pressed.
         """
-        if self.os_type == 'win32':
-            # Windows implementation
-            # getch() returns bytes
-            key = self.msvcrt.getch()
+        # Unix/Linux/macOS implementation
+        # We must switch the terminal to 'raw' mode to read 1 byte at a time
+        # instead of waiting for a newline (canonical mode).
+        fd = sys.stdin.fileno()
+        old_settings = self.termios.tcgetattr(fd)
+        try:
+            self.tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
             
-            # Check for special keys (arrows often start with \xe0 or \x00)
-            if key == b'\xe0' or key == b'\x00':
-                # Read the second byte to determine direction
-                sub_key = self.msvcrt.getch()
-                
-                if sub_key == b'H': return 'KEY_UP'
-                if sub_key == b'P': return 'KEY_DOWN'
-                if sub_key == b'K': return 'KEY_LEFT'
-                if sub_key == b'M': return 'KEY_RIGHT'
-                
-                return 'special_key'
-            
-            try:
-                return key.decode('utf-8')
-            except UnicodeDecodeError:
-                # Handle other special keys
-                return 'special_key'
+            # Handle Escape Sequences (Arrow keys start with ESC \x1b)
+            if ch == '\x1b':
+                # Check if there are more characters waiting (non-blocking peek)
+                # If nothing follows immediately, it was just the ESC key.
+                # Setting timeout to 0 makes it instant.
+                if self.select.select([sys.stdin], [], [], 0)[0]:
+                    # Read the next two characters (expected '[A', '[B', etc.)
+                    seq = sys.stdin.read(2)
+                    
+                    if seq == '[A': return 'KEY_UP'
+                    if seq == '[B': return 'KEY_DOWN'
+                    if seq == '[C': return 'KEY_RIGHT'
+                    if seq == '[D': return 'KEY_LEFT'
+                    
+            return ch
 
-        else:
-            # Unix/Linux/macOS implementation
-            # We must switch the terminal to 'raw' mode to read 1 byte at a time
-            # instead of waiting for a newline (canonical mode).
-            fd = sys.stdin.fileno()
-            old_settings = self.termios.tcgetattr(fd)
-            try:
-                self.tty.setraw(sys.stdin.fileno())
-                ch = sys.stdin.read(1)
-                
-                # Handle Escape Sequences (Arrow keys start with ESC \x1b)
-                if ch == '\x1b':
-                    # Check if there are more characters waiting (non-blocking peek)
-                    # If nothing follows immediately, it was just the ESC key.
-                    # Setting timeout to 0 makes it instant.
-                    if self.select.select([sys.stdin], [], [], 0)[0]:
-                        # Read the next two characters (expected '[A', '[B', etc.)
-                        seq = sys.stdin.read(2)
-                        
-                        if seq == '[A': return 'KEY_UP'
-                        if seq == '[B': return 'KEY_DOWN'
-                        if seq == '[C': return 'KEY_RIGHT'
-                        if seq == '[D': return 'KEY_LEFT'
-                        
-                return ch
-
-            finally:
-                # Always restore terminal settings to normal, otherwise the
-                # terminal will remain in a weird state after exit.
-                self.termios.tcsetattr(fd, self.termios.TCSADRAIN, old_settings)
-                                    
+        finally:
+            # Always restore terminal settings to normal, otherwise the
+            # terminal will remain in a weird state after exit.
+            self.termios.tcsetattr(fd, self.termios.TCSADRAIN, old_settings)
+                                
 
 class ScreenCursor:
     def __init__(self):
