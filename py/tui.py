@@ -115,6 +115,7 @@ class TUI(threading.Thread):
         if hasattr(signal, 'SIGWINCH'):
             signal.signal(signal.SIGWINCH, self.on_resize)
         signal.signal(signal.SIGINT, self.on_exit)
+        self.reloadRequired = False
 
     def get_size(self):
         """Returns terminal size as (rows, cols)."""
@@ -122,7 +123,7 @@ class TUI(threading.Thread):
 
     def on_resize(self, signum, frame):
         # Handle terminal resize events if needed
-        self.paint_screen()
+        self.reloadRequired = True
 
     def on_exit(self, signum, frame):
         self.cursor.quit()
@@ -186,7 +187,10 @@ class TUI(threading.Thread):
             elif key == 'i':
                 self.insert_mode()
             self.cursor.move_to(10, 5)
-            #self.cursor.write(f"You pressed: {key}\n")
+            if self.reloadRequired:
+                self.paint_screen()
+                self.reloadRequired = False
+            self.cursor.write(f"You pressed: {key}\n")
         self.cursor.quit()
 
 
