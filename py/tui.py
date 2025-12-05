@@ -141,7 +141,7 @@ class ScreenCursor:
 class TUI(threading.Thread):
     def __init__(self) -> None:
         super().__init__()
-        self.kb_listener = KeyboardListener()
+        self.kbListener = KeyboardListener()
         self.cursor = ScreenCursor()
 
     def run(self) -> None:
@@ -150,7 +150,7 @@ class TUI(threading.Thread):
         self.cursor.move_to(1, 1)
         self.cursor.write("TUI Started. Press 'q' to quit.\n")
         while True:
-            key = self.kb_listener.get_key()
+            key = self.kbListener.get_key()
             if key == 'q':
                 break
             self.cursor.write(f"You pressed: {key}\n")
