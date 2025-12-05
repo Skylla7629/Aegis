@@ -122,7 +122,7 @@ class TUI(threading.Thread):
 
     def on_resize(self, signum, frame):
         # Handle terminal resize events if needed
-        pass
+        self.paint_screen()
 
     def on_exit(self, signum, frame):
         self.cursor.quit()
@@ -143,6 +143,31 @@ class TUI(threading.Thread):
         self.cursor.write(f"{RED}+{'-' * (cols//3)}+{'-' * (cols -3- cols//3)}+{RESET}\n")
 
 
+    def insert_mode(self):
+        self.cursor.move_to(self.get_size()[0]-4, 5)
+        self.cursor.write("INSERT MODE: Type your message (Press ESC to exit)\n")
+        buffer = ""
+        while True:
+            key = self.kbListener.get_key()
+            if key == '\x1b':  # ESC key
+                break
+            elif key == '\x7f':  # Backspace
+                if len(buffer) > 0:
+                    buffer = buffer[:-1]
+                    self.cursor.move_to(self.get_size()[0]-3, 5)
+                    self.cursor.write(' ' * (len(buffer) + 1))
+                    self.cursor.move_to(self.get_size()[0]-3, 5)
+                    self.cursor.write(buffer)
+            else:
+                buffer += key
+                self.cursor.move_to(self.get_size()[0]-3, 5)
+                self.cursor.write(buffer)
+        self.cursor.move_to(self.get_size()[0]-4, 5)
+        self.cursor.write(' ' * 50)
+        self.cursor.move_to(self.get_size()[0]-3, 5)
+        self.cursor.write(' ' * 50)
+
+
     def run(self) -> None:
         self.cursor.write(HIDE_CURSOR)
         self.cursor.write(CLEAR)
@@ -151,11 +176,17 @@ class TUI(threading.Thread):
         self.cursor.move_to(3, 5)
         self.cursor.write("TUI Started. Press 'q' to quit.\n")
         self.cursor.write(f"{RED}Terminal Size: {self.get_size()[0]} rows x {self.get_size()[1]} cols{RESET}\n")
+        
+        self.cursor.write(SHOW_CURSOR)
+
         while True:
             key = self.kbListener.get_key()
             if key == 'q':
                 break
-            self.cursor.write(f"You pressed: {key}\n")
+            elif key == 'i':
+                self.insert_mode()
+            self.cursor.move_to(10, 5)
+            #self.cursor.write(f"You pressed: {key}\n")
         self.cursor.quit()
 
 
