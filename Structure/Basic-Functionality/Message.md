@@ -3,6 +3,7 @@
 ## Attributes
 - Body
     - Size
+- Author
 - Status
     - Sent/Recieved/Read
 - dateTime
