@@ -71,15 +71,14 @@ class ScreenCursor:
 
     def write(self, text):
         """Writes text at current cursor position."""
-        sys.stdout.write(text)
+        
+        init_pos_x = self.pos_x
+        init_pos_y = self.pos_y
+        for _, line in enumerate(text.split('\n')):
+            sys.stdout.write(line)
+            self.pos_x += len(line)
+            self.move_to(self.pos_y + _, init_pos_x)
         sys.stdout.flush()
-        # Update cursor position
-        lines = text.split('\n')
-        if len(lines) == 1:
-            self.pos_x += len(lines[0])
-        else:
-            self.pos_y += len(lines) - 1
-            self.pos_x = len(lines[-1]) + 1
 
     def move_to(self, y, x):
         """Moves cursor to (y, x) position."""
@@ -129,10 +128,27 @@ class TUI(threading.Thread):
         self.cursor.quit()
         sys.exit(0)
 
+    def paint_screen(self):
+        self.cursor.write(CLEAR)
+        self.cursor.move_to(1, 1)
+        rows, cols = self.get_size()
+        
+        # draw border
+        self.cursor.write(f"{RED}+{'-' * (cols//3)}+{'-' * (cols -3- cols//3)}+{RESET}\n")
+        for _ in range(rows - 8):
+            self.cursor.write(f"{RED}|{RESET}{' ' * (cols//3)}{RED}|{RESET}{' ' * (cols -3- cols//3)}{RED}|{RESET}\n")
+        self.cursor.write(f"{RED}+{' ' * (cols//3)}+{'-' * (cols -3- cols//3)}+{RESET}\n")
+        for _ in range(5):
+            self.cursor.write(f"{RED}|{RESET}{' ' * (cols//3)}{RED}|{RESET}{' ' * (cols -3- cols//3)}{RED}|{RESET}\n")
+        self.cursor.write(f"{RED}+{'-' * (cols//3)}+{'-' * (cols -3- cols//3)}+{RESET}\n")
+
+
     def run(self) -> None:
         self.cursor.write(HIDE_CURSOR)
         self.cursor.write(CLEAR)
         self.cursor.move_to(1, 1)
+        self.paint_screen()
+        self.cursor.move_to(3, 5)
         self.cursor.write("TUI Started. Press 'q' to quit.\n")
         self.cursor.write(f"{RED}Terminal Size: {self.get_size()[0]} rows x {self.get_size()[1]} cols{RESET}\n")
         while True:
