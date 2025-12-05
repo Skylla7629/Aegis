@@ -2,6 +2,16 @@
 import threading
 import sys
 
+# --- ANSI Constants ---
+ESC = "\033"
+CLEAR = f"{ESC}[2J"
+HOME = f"{ESC}[H" 
+RED = f"{ESC}[31m" 
+RESET = f"{ESC}[0m" 
+HIDE_CURSOR = f"{ESC}[?25l"
+SHOW_CURSOR = f"{ESC}[?25h"
+SELECTION_STYLE = f"{ESC}[7m"
+
 class KeyboardListener:
     """
     A cross-platform keyboard listener using only Python standard libraries.
@@ -82,23 +92,69 @@ class KeyboardListener:
                 # Always restore terminal settings to normal, otherwise the
                 # terminal will remain in a weird state after exit.
                 self.termios.tcsetattr(fd, self.termios.TCSADRAIN, old_settings)
+                                    
+
+class ScreenCursor:
+    def __init__(self):
+        self.pos_y = 1
+        self.pos_x = 1
+
+    def write(self, text):
+        """Writes text at current cursor position."""
+        sys.stdout.write(text)
+        sys.stdout.flush()
+        # Update cursor position
+        lines = text.split('\n')
+        if len(lines) == 1:
+            self.pos_x += len(lines[0])
+        else:
+            self.pos_y += len(lines) - 1
+            self.pos_x = len(lines[-1]) + 1
+
+    def move_to(self, y, x):
+        """Moves cursor to (y, x) position."""
+        sys.stdout.write(f"{ESC}[{y};{x}H")
+        self.pos_y = y
+        self.pos_x = x
+
+    def lines_down(self, n=1):
+        """Moves cursor down by n lines."""
+        self.pos_y += n
+        sys.stdout.write(f"{ESC}[{n}B")
+
+    def lines_up(self, n=1):
+        """Moves cursor up by n lines."""
+        self.pos_y -= n
+        sys.stdout.write(f"{ESC}[{n}A")
+                         
+    def quit(self):
+        """Restores cursor visibility and exits."""
+        sys.stdout.write(SHOW_CURSOR)
+        sys.stdout.write(RESET)
+        sys.stdout.write(CLEAR)
+        sys.stdout.write(HOME)
+        sys.stdout.flush()
+        print("Goodbye!")
+
 
 
 class TUI(threading.Thread):
     def __init__(self) -> None:
         super().__init__()
-        # --- ANSI Constants ---
-        ESC = "\033"
-        CLEAR = f"{ESC}[2J"
-        HOME = f"{ESC}[H" 
-        RED = f"{ESC}[31m" 
-        RESET = f"{ESC}[0m" 
-        HIDE_CURSOR = f"{ESC}[?25l"
-        SHOW_CURSOR = f"{ESC}[?25h"
-        SELECTION_STYLE = f"{ESC}[7m"
-
         self.kb_listener = KeyboardListener()
+        self.cursor = ScreenCursor()
 
+    def run(self) -> None:
+        self.cursor.write(HIDE_CURSOR)
+        self.cursor.write(CLEAR)
+        self.cursor.move_to(1, 1)
+        self.cursor.write("TUI Started. Press 'q' to quit.\n")
+        while True:
+            key = self.kb_listener.get_key()
+            if key == 'q':
+                break
+            self.cursor.write(f"You pressed: {key}\n")
+        self.cursor.quit()
 
 
 

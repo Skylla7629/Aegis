@@ -1,5 +1,5 @@
 ##
-
+from tui import TUI
 
 class Chat:
     def __init__(self) -> None:
@@ -22,8 +22,8 @@ class Message:
 
 
 def main():
-    pass
-
+    tui = TUI()
+    tui.start()
     # Run TUI
     # Run Backend
 
