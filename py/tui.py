@@ -74,10 +74,18 @@ class ScreenCursor:
         
         init_pos_x = self.pos_x
         init_pos_y = self.pos_y
-        for _, line in enumerate(text.split('\n')):
+        lines = text.split('\n')
+        
+        for line_idx, line in enumerate(lines):
             sys.stdout.write(line)
             self.pos_x += len(line)
-            self.move_to(self.pos_y + _, init_pos_x)
+            
+            # Move to next line if there are more lines to write
+            if line_idx < len(lines) - 1:
+                self.pos_y += 1
+                self.pos_x = init_pos_x
+                self.move_to(self.pos_y, self.pos_x)
+    
         sys.stdout.flush()
 
     def move_to(self, y, x):
@@ -145,27 +153,34 @@ class TUI(threading.Thread):
 
 
     def insert_mode(self):
-        self.cursor.move_to(self.get_size()[0]-4, 5)
-        self.cursor.write("INSERT MODE: Type your message (Press ESC to exit)\n")
+        self.cursor.move_to(self.get_size()[0]-2, 5)
+        self.cursor.write("-- INSERT --\n")
+        self.cursor.move_to(self.get_size()[0]-4, self.get_size()[1]//3 + 5)
+        self.cursor.write('')
         buffer = ""
         while True:
+            pos_x = self.get_size()[1]//3 + 5
             key = self.kbListener.get_key()
             if key == '\x1b':  # ESC key
                 break
             elif key == '\x7f':  # Backspace
                 if len(buffer) > 0:
                     buffer = buffer[:-1]
-                    self.cursor.move_to(self.get_size()[0]-3, 5)
+                    self.cursor.move_to(self.get_size()[0]-4, pos_x)
                     self.cursor.write(' ' * (len(buffer) + 1))
-                    self.cursor.move_to(self.get_size()[0]-3, 5)
+                    self.cursor.move_to(self.get_size()[0]-4, pos_x)
                     self.cursor.write(buffer)
+            elif key == '\r':  # Enter key
+                buffer += '\n'
+                self.cursor.move_to(self.get_size()[0]-4, pos_x)
+                self.cursor.write(buffer)
             else:
                 buffer += key
-                self.cursor.move_to(self.get_size()[0]-3, 5)
+                self.cursor.move_to(self.get_size()[0]-4, pos_x)
                 self.cursor.write(buffer)
         self.cursor.move_to(self.get_size()[0]-4, 5)
         self.cursor.write(' ' * 50)
-        self.cursor.move_to(self.get_size()[0]-3, 5)
+        self.cursor.move_to(self.get_size()[0]-3, pos_x)
         self.cursor.write(' ' * 50)
 
 
