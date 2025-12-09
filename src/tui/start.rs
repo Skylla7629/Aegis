@@ -1,6 +1,6 @@
 use std::io;
 
-use ratatui::{DefaultTerminal, Frame, buffer::Buffer, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, layout::{Constraint, Direction, Layout, Rect}, symbols::border, text::{Line, Text}, widgets::{Block, Borders, Paragraph, Widget}};
+use ratatui::{DefaultTerminal, Frame, buffer::Buffer, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, layout::{Constraint, Direction, Layout, Rect}, symbols::{self, border}, text::{Line, Text}, widgets::{Block, Borders, Paragraph, Widget}};
 
 
 pub fn start() {
@@ -37,22 +37,38 @@ impl App {
     }
 
     fn render_input_widget(frame: &mut Frame, area: Rect, app_state: &App) {
+        let border_set = border::Set {
+            top_left: symbols::line::NORMAL.vertical_right,
+            bottom_left: symbols::line::NORMAL.horizontal_up,
+            ..border::PLAIN
+        };
+
         let input = Paragraph::new("input")
-            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT));
+            .block(Block::default()
+            .borders(Borders::ALL)
+            .border_set(border_set)
+            .title("Input"));
         frame.render_widget(input, area);
     }
 
     fn render_chat_picker_widget(frame: &mut Frame, area: Rect, app_state: &App) {
-        let status = Paragraph::new("Chat Picker")
-            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT));
-        frame.render_widget(status, area);
+        let chat_picker = Paragraph::new("Chat Picker")
+            .block(Block::default()
+            .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+            .title("Chat Picker"));
+        frame.render_widget(chat_picker, area);
     }
 
     fn render_messages_widget(frame: &mut Frame, area: Rect, app_state: &App) {
-        let history_text = &app_state._chats_names; 
+        let border_set = border::Set {
+            top_left: symbols::line::NORMAL.horizontal_down,
+            ..border::PLAIN
+        };
 
         let messages = Paragraph::new("messages")
-            .block(Block::default().borders(Borders::ALL).title("Messages"));
+            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::TOP)
+            .border_set(border_set)
+            .title("Messages"));
 
         frame.render_widget(messages, area);
     }
