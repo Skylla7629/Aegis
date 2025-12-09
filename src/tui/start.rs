@@ -1,6 +1,6 @@
 use std::io;
 
-use ratatui::{DefaultTerminal, Frame, buffer::Buffer, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, layout::{Constraint, Layout, Rect}, symbols::border, text::{Line, Text}, widgets::{Block, Paragraph, Widget}};
+use ratatui::{DefaultTerminal, Frame, buffer::Buffer, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, layout::{Constraint, Direction, Layout, Rect}, symbols::border, text::{Line, Text}, widgets::{Block, Borders, Paragraph, Widget}};
 
 
 pub fn start() {
@@ -29,7 +29,49 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
+        let layout_areas = Self::create_chat_layout(frame.area());
+
+        Self::render_chat_picker_widget(frame, layout_areas[0], self);
+        Self::render_messages_widget(frame, layout_areas[1], self);
+        Self::render_input_widget(frame, layout_areas[2], self);
+    }
+
+    fn render_input_widget(frame: &mut Frame, area: Rect, app_state: &App) {
+        let input = Paragraph::new("input")
+            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT));
+        frame.render_widget(input, area);
+    }
+
+    fn render_chat_picker_widget(frame: &mut Frame, area: Rect, app_state: &App) {
+        let status = Paragraph::new("Chat Picker")
+            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT));
+        frame.render_widget(status, area);
+    }
+
+    fn render_messages_widget(frame: &mut Frame, area: Rect, app_state: &App) {
+        let history_text = &app_state._chats_names; 
+
+        let messages = Paragraph::new("messages")
+            .block(Block::default().borders(Borders::ALL).title("Messages"));
+
+        frame.render_widget(messages, area);
+    }
+
+    fn create_chat_layout (area: Rect) -> [Rect; 3] {
+        let layout = Layout::new(
+            Direction::Horizontal,
+            [
+                Constraint::Percentage(25),
+                Constraint::Min(25),
+            ])
+            .split(area);
+        let content_area = layout[1];
+        let chat_area = Layout::vertical([
+            Constraint::Min(3),
+            Constraint::Length(3),
+        ])
+        .split(content_area);
+        [layout[0], chat_area[0], chat_area[1]]
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -47,26 +89,5 @@ impl App {
             KeyCode::Char('q') => self.exit = true,
             _ => {}
         }
-    }
-}
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Aegis - Secure Chatting ");
-
-        let block = Block::bordered()
-            .title(title.centered())
-            .border_set(border::ROUNDED);
-
-        let text = Text::from(vec![
-            Line::from(vec![
-                "Text".into(),
-            ])
-        ]);
-
-        Paragraph::new(text)
-            .centered()
-            .block(block)
-            .render(area,buf);
     }
 }
