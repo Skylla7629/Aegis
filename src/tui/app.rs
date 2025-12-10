@@ -1,7 +1,6 @@
 use std::io;
 
-use ratatui::{DefaultTerminal, Frame, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, layout::{Constraint, Direction, Layout, Rect}, symbols::{self, border}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, Paragraph}};
-use ratatui_textarea::{Input, TextArea};
+use ratatui::{DefaultTerminal, Frame, crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind}};
 
 // struct to keep Track of values from the TUI
 #[derive(Default)]
@@ -42,71 +41,6 @@ impl App {
         Self::render_chat_picker_widget(frame, layout_areas[0]);
         Self::render_messages_widget(self, frame, layout_areas[1]);
         Self::render_input_widget(self, frame, layout_areas[2]);
-    }
-
-    fn render_input_widget(&self, frame: &mut Frame, area: Rect) {
-        let border_set = border::Set {
-            top_left: symbols::line::NORMAL.vertical_right,
-            bottom_left: symbols::line::NORMAL.horizontal_up,
-            top_right: symbols::line::NORMAL.vertical_left,
-            ..border::PLAIN
-        };
-
-        let input = Paragraph::new(self.input.to_string())
-            .block(Block::default()
-            .borders(Borders::ALL)
-            .border_set(border_set)
-            .title("Input"));
-        frame.render_widget(input, area);
-    }
-
-    fn render_chat_picker_widget(frame: &mut Frame, area: Rect) {
-        let chat_picker = Paragraph::new("")
-            .block(Block::default()
-            .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-            .title("Chat Picker"));
-        frame.render_widget(chat_picker, area);
-    }
-
-    fn render_messages_widget(&self, frame: &mut Frame, area: Rect) {
-        let border_set = border::Set {
-            top_left: symbols::line::NORMAL.horizontal_down,
-            ..border::PLAIN
-        };
-
-        let messages: Vec<ListItem> = self
-            .message_history
-            .iter()
-            .enumerate()
-            .map(|(i, m)| {
-                let content = Line::from(Span::raw(format!("{i}: {m}")));
-                ListItem::new(content)
-            })
-            .collect();
-            
-        let messages = List::new(messages)
-            .block(Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::TOP)
-            .border_set(border_set)
-            .title("Messages"));
-
-        frame.render_widget(messages, area);
-    }
-
-    fn create_chat_layout (area: Rect) -> [Rect; 3] {
-        let layout = Layout::new(
-            Direction::Horizontal,
-            [
-                Constraint::Percentage(25),
-                Constraint::Min(25),
-            ])
-            .split(area);
-        let content_area = layout[1];
-        let chat_area = Layout::vertical([
-            Constraint::Min(3),
-            Constraint::Length(3),
-        ])
-        .split(content_area);
-        [layout[0], chat_area[0], chat_area[1]]
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
