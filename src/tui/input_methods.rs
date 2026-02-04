@@ -62,3 +62,17 @@ impl App {
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tui::app::App;
+
+    #[test]
+    fn test_move_cursor_right () {
+        let mut control = App::new();
+        control.character_index_cursor = 0;
+        control.input = "    ".to_string();
+        control.move_cursor_right();
+        assert_eq!(control.character_index_cursor, 1);
+    }
+}
