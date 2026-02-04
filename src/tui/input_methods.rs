@@ -75,4 +75,31 @@ mod tests {
         control.move_cursor_right();
         assert_eq!(control.character_index_cursor, 1);
     }
+
+    #[test]
+    fn test_move_cursor_right_when_overflow () {
+        let mut control = App::new();
+        control.character_index_cursor = 0;
+        control.input = "".to_string();
+        control.move_cursor_right();
+        assert_eq!(control.character_index_cursor, 0);
+    }
+
+    #[test]
+    fn test_move_cursor_left () {
+        let mut control = App::new();
+        control.character_index_cursor = 1;
+        control.input = "    ".to_string();
+        control.move_cursor_left();
+        assert_eq!(control.character_index_cursor, 0);
+    }
+
+    #[test]
+    fn test_move_cursor_left_when_overflow () {
+        let mut control = App::new();
+        control.character_index_cursor = 0;
+        control.input = "".to_string();
+        control.move_cursor_left();
+        assert_eq!(control.character_index_cursor, 0);
+    }
 }
